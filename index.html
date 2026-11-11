@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MANIA ARENA — Board Games on Steroids</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #05020c; color: #f1ecff; font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace; overflow-x: hidden; user-select: none; -webkit-user-select: none; }
+  #arena { position: fixed; inset: 0; z-index: 0; }
+  .wrap { position: relative; z-index: 1; min-height: 100%; display: flex; flex-direction: column; align-items: center; padding: 26px 18px 150px; }
+  .marquee { width: 100vw; margin: -26px 0 18px; overflow: hidden; white-space: nowrap; background: linear-gradient(90deg, #ff2e2e, #ff8a00, #ffd23f, #ff8a00, #ff2e2e); color: #2a0800;
+             font-weight: 900; font-style: italic; font-size: 13px; letter-spacing: .3em; padding: 6px 0; box-shadow: 0 0 30px rgba(255,120,0,.6); }
+  .marquee span { display: inline-block; padding-left: 100%; animation: scroll 26s linear infinite; }
+  @keyframes scroll { to { transform: translateX(-100%); } }
+  .presents { font-size: 11px; letter-spacing: .7em; color: #ffd23f; opacity: 0; animation: fadeUp .8s .2s forwards; }
+  h1 { font-size: clamp(46px, 9vw, 112px); font-weight: 900; font-style: italic; letter-spacing: .06em; line-height: 1; margin: 6px 0 4px; position: relative;
+       background: linear-gradient(180deg, #fffbe0 0%, #ffd23f 30%, #ff7a00 62%, #ff1e3c 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+       filter: drop-shadow(0 4px 0 #6a0018) drop-shadow(0 0 30px rgba(255,120,0,.7)); animation: slam .7s cubic-bezier(.2,1.8,.4,1) both, pump 1.8s 1s ease-in-out infinite; }
+  @keyframes slam { from { transform: scale(3) rotate(-8deg); opacity: 0; filter: blur(12px); } }
+  @keyframes pump { 50% { transform: scale(1.035) skewX(-5deg); } }
+  .belt { font-size: clamp(14px, 1.6vw, 18px); letter-spacing: .5em; color: #fff; text-shadow: 0 0 14px #ff2e88; margin-bottom: 30px; opacity: 0; animation: fadeUp .8s .5s forwards; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  .pick { font-size: 13px; letter-spacing: .5em; color: #ffd23f; margin-bottom: 18px; animation: blink 1.1s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: .35; } }
+  .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; width: min(1080px, 100%); }
+  @media (max-width: 900px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
+  .card { position: relative; display: flex; flex-direction: column; text-decoration: none; color: inherit; border-radius: 22px; overflow: hidden; cursor: pointer;
+          background: linear-gradient(170deg, rgba(56,18,70,.92), rgba(12,5,26,.96)); border: 2px solid rgba(255,210,63,.18);
+          transform: translateY(40px); opacity: 0; animation: enter .7s cubic-bezier(.2,1.4,.4,1) forwards; transition: transform .18s, box-shadow .18s, border-color .18s; }
+  .card:nth-child(1) { animation-delay: .7s; } .card:nth-child(2) { animation-delay: .85s; } .card:nth-child(3) { animation-delay: 1s; } 
+  @keyframes enter { to { transform: none; opacity: 1; } }
+  .card:hover, .card.focus { transform: translateY(-10px) scale(1.03); border-color: var(--c); box-shadow: 0 0 0 2px var(--c), 0 20px 60px -10px var(--c); z-index: 2; }
+  .card::after { content: ''; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.18) 45%, transparent 60%); transform: translateX(-120%); pointer-events: none; }
+  .card:hover::after { transition: transform .7s; transform: translateX(120%); }
+  .num { position: absolute; top: 10px; left: 12px; z-index: 2; font-weight: 900; font-size: 12px; color: #000; background: var(--c); border-radius: 8px; padding: 2px 8px; letter-spacing: .1em; }
+  .badge { position: absolute; top: 10px; right: 12px; z-index: 2; font-size: 10px; font-weight: 900; letter-spacing: .2em; padding: 3px 8px; border-radius: 8px; background: rgba(0,0,0,.6); color: var(--c); border: 1px solid var(--c); }
+  .preview { width: 100%; aspect-ratio: 4 / 3; display: block; background: radial-gradient(circle at 50% 40%, #2a1050, #0b0418 75%); border-bottom: 2px solid rgba(255,255,255,.06); }
+  .body { padding: 14px 16px 18px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .name { font-size: 21px; font-weight: 900; font-style: italic; letter-spacing: .05em; color: var(--c); text-shadow: 0 0 16px var(--c); }
+  .tag { font-size: 10px; letter-spacing: .25em; color: #ff9ccc; text-transform: uppercase; }
+  .desc { font-size: 12.5px; line-height: 1.5; color: #d2c9f0; flex: 1; margin: 4px 0 8px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+  .chips span { font-size: 15px; background: rgba(255,255,255,.06); border-radius: 8px; padding: 3px 6px; }
+  .go { align-self: stretch; text-align: center; font-weight: 900; font-style: italic; font-size: 15px; letter-spacing: .3em; padding: 11px; border-radius: 12px; color: #1a0600;
+        background: linear-gradient(90deg, var(--c), #fff 50%, var(--c)); background-size: 200% 100%; animation: shimmer 2.4s linear infinite; }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+  .foot { margin-top: 28px; font-size: 11px; color: #a79cd0; letter-spacing: .2em; text-align: center; line-height: 2; }
+  .foot b { color: #ffd23f; }
+  #sound { position: fixed; top: 44px; right: 14px; z-index: 5; font: inherit; font-size: 11px; font-weight: 800; letter-spacing: .1em; color: #ffd23f; background: rgba(20,8,36,.8);
+           border: 1px solid #ffd23f66; border-radius: 10px; padding: 7px 11px; cursor: pointer; }
+  @media (max-width: 700px) {
+    #sound { top: auto; bottom: 14px; right: 14px; }
+    .belt { letter-spacing: .2em; font-size: 12px; }
+    .presents { letter-spacing: .4em; }
+  }
+  #wipe { position: fixed; inset: 0; z-index: 20; pointer-events: none; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 10px;
+          background: radial-gradient(circle, var(--c, #ff8a00) 0%, #05020c 70%); clip-path: circle(0% at 50% 50%); transition: clip-path .75s cubic-bezier(.7,0,.3,1); }
+  #wipe.on { clip-path: circle(150% at 50% 50%); }
+  #wipe .t { font-size: clamp(30px, 6vw, 70px); font-weight: 900; font-style: italic; color: #fff; text-shadow: 0 4px 0 #6a0018, 0 0 40px #000; letter-spacing: .06em; text-align: center; }
+  #wipe .d { font-size: 14px; letter-spacing: .5em; color: #fff; text-shadow: 0 0 10px #000; }
+</style>
+</head>
+<body>
+<canvas id="arena"></canvas>
+<button id="sound">🔊 SOUND ON</button>
+<div class="wrap">
+  <div class="marquee"><span>★ LIVE FROM THE MANIA ARENA ★ THREE GAMES ★ ZERO MERCY ★ STEEL CHAIRS PERMITTED ★ AI OPPONENTS STANDING BY ★ BRING A FRIEND FOR HOT-SEAT ★ OR WATCH THE AIS DESTROY EACH OTHER ★</span></div>
+  <div class="presents">TONIGHT'S CARD</div>
+  <h1>MANIA ARENA</h1>
+  <div class="belt">★ BOARD GAMES ON MAXIMUM STEROIDS ★</div>
+  <div class="pick">▼ PICK YOUR MATCH ▼</div>
+  <div class="grid">
+    <a class="card" data-game="tic-tac-mania" data-preview="ttt" style="--c:#ffb020">
+      <span class="num">1</span><span class="badge">MAIN EVENT</span>
+      <canvas class="preview"></canvas>
+      <div class="body">
+        <div class="name">TIC·TAC·MANIA</div><div class="tag">wrestling tic-tac-toe</div>
+        <div class="desc">Nine rings inside one giant board. Spend hype on steel chairs, heel turns and atomic leg drops while earthquakes spin the arena.</div>
+        <div class="chips"><span title="Steel chair">🪑</span><span title="Heel turn">😈</span><span title="Leg drop">💥</span><span title="Earthquake">🌋</span><span title="Maximum flex">💪</span></div>
+        <span class="go">ENTER ▸</span>
+      </div></a>
+    <a class="card" data-game="top-rope-four" data-preview="c4" style="--c:#ff2e88">
+      <span class="num">2</span><span class="badge">NEW</span>
+      <canvas class="preview"></canvas>
+      <div class="body">
+        <div class="name">TOP ROPE FOUR</div><div class="tag">chain-reaction four-in-a-row</div>
+        <div class="desc">Four in a row is a pinfall. The pieces vanish, everything falls, and the chain reactions can score for either player.</div>
+        <div class="chips"><span title="Steel chair">🪑</span><span title="Cage">⛓️</span><span title="Piledriver">🙃</span><span title="Heavyweight">🏋️</span><span title="Floor collapse">🕳️</span></div>
+        <span class="go">ENTER ▸</span>
+      </div></a>
+    <a class="card" data-game="king-of-the-ring" data-preview="chk" style="--c:#2ef2ff">
+      <span class="num">3</span><span class="badge">NEW</span>
+      <canvas class="preview"></canvas>
+      <div class="body">
+        <div class="name">KING OF THE RING</div><div class="tag">royal rumble checkers</div>
+        <div class="desc">Checkers where whoever's losing keeps getting new wrestlers. Instant coronations, run-ins, and a frog splash that flattens everything nearby.</div>
+        <div class="chips"><span title="Run-in">🚪</span><span title="Coronation">👑</span><span title="Frog splash">💥</span><span title="Tag team">🤝</span><span title="Title shot">🏆</span></div>
+        <span class="go">ENTER ▸</span>
+      </div></a>
+  </div>
+  <div class="foot">every game: <b>vs AI</b> (rookie → legend) · <b>hot-seat 2-player</b> · <b>AI vs AI</b><br>press <b>1</b>–<b>3</b> or click a card · turn your sound on for the announcer</div>
+</div>
+<div id="wipe"><div class="t"></div><div class="d">LET'S GET IT ON</div></div>
+
+<script>
+(() => {
+'use strict';
+// ---------- routing: from disk the games are sibling folders; hosted, they live inside this one ----------
+const base = '';
+const cards = [...document.querySelectorAll('.card')];
+cards.forEach(a => { a.href = base + a.dataset.game + '/index.html'; });
+
+// ---------- sound (only after the visitor opts in) ----------
+let ctx = null, master = null, crowdGain = null;
+let soundOn = (() => { try { return localStorage.getItem('mania-arena-sound') !== 'off'; } catch (e) { return true; } })();
+function initAudio() {
+  if (ctx) return;
+  try {
+    ctx = new (window.AudioContext || window.webkitAudioContext)(); master = ctx.createGain(); master.gain.value = soundOn ? 0.3 : 0; master.connect(ctx.destination);
+    const n = ctx.sampleRate * 3, buf = ctx.createBuffer(2, n, ctx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) { const d = buf.getChannelData(ch); let l = 0; for (let i = 0; i < n; i++) { l = (l + 0.04 * (Math.random() * 2 - 1)) / 1.04; d[i] = l * 3.2; } }
+    const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 700; bp.Q.value = 0.5;
+    crowdGain = ctx.createGain(); crowdGain.gain.value = 0.2; src.connect(bp); bp.connect(crowdGain); crowdGain.connect(master); src.start();
+  } catch (e) { ctx = null; }
+}
+function tone(f, d, type = 'sine', v = 0.3, f2 = null, delay = 0) {
+  if (!ctx || !soundOn) return; const t = ctx.currentTime + delay, o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+  o.connect(g); g.connect(master); o.start(t); o.stop(t + d + 0.05);
+}
+function cheer(a) { if (!crowdGain || !soundOn) return; const t = ctx.currentTime, g = crowdGain.gain; g.cancelScheduledValues(t); g.setTargetAtTime(0.2 + a, t, 0.08); g.setTargetAtTime(0.2, t + 0.6 + a, 0.8); }
+function bell() { for (let i = 0; i < 3; i++) { tone(1320, 1, 'triangle', 0.35, null, i * 0.3); tone(3420, 0.6, 'sine', 0.12, null, i * 0.3); } }
+const soundBtn = document.getElementById('sound');
+// Browsers only allow audio after the first click or keypress, so sound is ON by default and wakes up then.
+function unlock() { initAudio(); if (ctx && ctx.state === 'suspended') ctx.resume(); }
+addEventListener('pointerdown', unlock, true); addEventListener('keydown', unlock, true);
+soundBtn.textContent = soundOn ? '🔊 SOUND ON' : '🔇 SOUND OFF';
+soundBtn.onclick = () => {
+  initAudio(); soundOn = !soundOn; try { localStorage.setItem('mania-arena-sound', soundOn ? 'on' : 'off'); } catch (e) {}
+  if (ctx) { if (ctx.state === 'suspended') ctx.resume(); master.gain.setTargetAtTime(soundOn ? 0.3 : 0, ctx.currentTime, 0.05); }
+  soundBtn.textContent = soundOn ? '🔊 SOUND ON' : '🔇 SOUND OFF';
+  if (soundOn) { cheer(1); tone(220, 0.4, 'sawtooth', 0.12, 880); }
+};
+
+// ---------- the arena background ----------
+const cv = document.getElementById('arena'), g = cv.getContext('2d');
+let W = 0, H = 0, dpr = 1, excite = 0.3, hoverColor = [255, 140, 40];
+function resize() { dpr = Math.min(devicePixelRatio || 1, 2); W = innerWidth; H = innerHeight; cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px'; }
+addEventListener('resize', resize); resize();
+const crowd = Array.from({ length: 260 }, (_, i) => ({ x: Math.random(), row: i % 5, h: 0.6 + Math.random() * 0.55, ph: Math.random() * 6, sign: Math.random() < 0.06 ? ['#ff2e88', '#2ef2ff', '#ffd23f', '#fff'][i % 4] : null }));
+const flashes = [];
+const col = (a) => `rgba(${hoverColor[0] | 0},${hoverColor[1] | 0},${hoverColor[2] | 0},${a})`;
+let targetColor = [255, 140, 40];
+function drawArena(now) {
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  for (let k = 0; k < 3; k++) hoverColor[k] += (targetColor[k] - hoverColor[k]) * 0.05;
+  const sky = g.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, '#03010a'); sky.addColorStop(0.55, '#14062a'); sky.addColorStop(1, '#05020c');
+  g.fillStyle = sky; g.fillRect(0, 0, W, H);
+  // lighting truss
+  g.strokeStyle = 'rgba(120,100,160,0.25)'; g.lineWidth = 2;
+  g.beginPath(); g.moveTo(0, 40); g.lineTo(W, 40); g.moveTo(0, 52); g.lineTo(W, 52); g.stroke();
+  for (let x = 0; x < W; x += 24) { g.beginPath(); g.moveTo(x, 40); g.lineTo(x + 12, 52); g.lineTo(x + 24, 40); g.stroke(); }
+  // sweeping spotlights
+  g.globalCompositeOperation = 'lighter';
+  const n = 6;
+  for (let i = 0; i < n; i++) {
+    const sx = W * (i + 0.5) / n, ang = Math.PI / 2 + Math.sin(now / (1400 + i * 330) + i * 1.7) * (0.35 + excite * 0.25), len = H * 1.2, w = 0.09;
+    const gr = g.createRadialGradient(sx, 46, 0, sx, 46, len);
+    gr.addColorStop(0, i % 2 ? col(0.22) : `rgba(255,230,170,${0.14 + excite * 0.06})`); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = gr; g.beginPath(); g.moveTo(sx, 46); g.lineTo(sx + Math.cos(ang - w) * len, 46 + Math.sin(ang - w) * len); g.lineTo(sx + Math.cos(ang + w) * len, 46 + Math.sin(ang + w) * len); g.closePath(); g.fill();
+    g.fillStyle = 'rgba(255,240,200,0.9)'; g.beginPath(); g.arc(sx, 48, 5, 0, 7); g.fill();
+  }
+  g.globalCompositeOperation = 'source-over';
+  // crowd
+  excite += (0.3 - excite) * 0.01;
+  for (const c of crowd) {
+    const rowY = H - c.row * 26 - 8, bounce = Math.abs(Math.sin(now / (150 + c.row * 25) + c.ph)) * 16 * excite;
+    const x = c.x * W, y = rowY - bounce - 30 * c.h, sh = 12 + c.row * 7;
+    g.fillStyle = `rgb(${sh},${(sh * 0.5) | 0},${sh + 16})`;
+    g.beginPath(); g.arc(x, y, 10 * c.h, 0, 7); g.fill(); g.fillRect(x - 13 * c.h, y + 7, 26 * c.h, 50);
+    if (excite > 0.45 && Math.sin(now / 85 + c.ph * 9) > 0.55) { g.fillRect(x - 14 * c.h, y - 22 * c.h, 4, 20 * c.h); g.fillRect(x + 10 * c.h, y - 22 * c.h, 4, 20 * c.h); }
+    if (c.sign) { g.fillStyle = c.sign; g.fillRect(x - 16, y - 36 - bounce * 0.5, 32, 18); g.fillStyle = '#000'; g.font = '900 10px ui-monospace, Menlo, monospace'; g.textAlign = 'center'; g.fillText('#1', x, y - 23 - bounce * 0.5); }
+  }
+  // camera flashes
+  if (Math.random() < 0.15 + excite * 0.6) flashes.push({ x: Math.random() * W, y: H - Math.random() * 140, t: now });
+  for (let i = flashes.length - 1; i >= 0; i--) {
+    const f = flashes[i], a = 1 - (now - f.t) / 180; if (a <= 0) { flashes.splice(i, 1); continue; }
+    const gr = g.createRadialGradient(f.x, f.y, 0, f.x, f.y, 26); gr.addColorStop(0, `rgba(255,255,255,${a})`); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = gr; g.fillRect(f.x - 26, f.y - 26, 52, 52);
+  }
+}
+
+// ---------- live previews: each card plays a tiny loop of its game ----------
+const PINK = '#ff2e88', CYAN = '#2ef2ff', GOLD = '#ffd23f';
+const previews = cards.map(card => {
+  const c = card.querySelector('canvas'); return { card, c, g: c.getContext('2d'), kind: card.dataset.preview, w: 0, h: 0, t0: performance.now() + Math.random() * 3000 };
+});
+function sizePreviews() { for (const p of previews) { const r = p.c.getBoundingClientRect(); p.w = r.width; p.h = r.height; p.c.width = r.width * dpr; p.c.height = r.height * dpr; } }
+addEventListener('resize', sizePreviews);
+function glowStroke(ctx, color, blur, fn) { ctx.save(); ctx.strokeStyle = color; ctx.shadowColor = color; ctx.shadowBlur = blur; fn(); ctx.restore(); }
+function X(ctx, x, y, r, color, prog = 1) { glowStroke(ctx, color, 10, () => { ctx.lineCap = 'round'; ctx.lineWidth = Math.max(2, r * 0.35); const a = Math.min(1, prog * 2), b = Math.max(0, prog * 2 - 1); ctx.beginPath(); ctx.moveTo(x - r, y - r); ctx.lineTo(x - r + 2 * r * a, y - r + 2 * r * a); if (b) { ctx.moveTo(x + r, y - r); ctx.lineTo(x + r - 2 * r * b, y - r + 2 * r * b); } ctx.stroke(); }); }
+function O(ctx, x, y, r, color, prog = 1) { glowStroke(ctx, color, 10, () => { ctx.lineWidth = Math.max(2, r * 0.35); ctx.beginPath(); ctx.arc(x, y, r, -Math.PI / 2, -Math.PI / 2 + 6.283 * prog); ctx.stroke(); }); }
+function disc(ctx, x, y, r, color, king = false) {
+  ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = 10; const gr = ctx.createRadialGradient(x - r * 0.3, y - r * 0.35, r * 0.1, x, y, r);
+  gr.addColorStop(0, '#fff'); gr.addColorStop(0.35, color); gr.addColorStop(1, '#000'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
+  ctx.shadowBlur = 0; ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.beginPath(); ctx.ellipse(x - r * 0.22, y - r * 0.05, r * 0.14, r * 0.08, -0.4, 0, 7); ctx.ellipse(x + r * 0.22, y - r * 0.05, r * 0.14, r * 0.08, 0.4, 0, 7); ctx.fill();
+  if (king) { ctx.font = `${r}px serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('👑', x, y - r * 0.95); }
+  ctx.restore();
+}
+function ropes(ctx, x, y, w, h) { ['rgba(230,60,70,.9)', 'rgba(240,240,250,.8)', 'rgba(60,110,240,.9)'].forEach((c, i) => { ctx.strokeStyle = c; ctx.lineWidth = 1.6; const o = 3 + i * 4; ctx.strokeRect(x - o, y - o, w + 2 * o, h + 2 * o); }); ctx.fillStyle = GOLD; for (const [a, b] of [[x - 9, y - 9], [x + w + 9, y - 9], [x - 9, y + h + 9], [x + w + 9, y + h + 9]]) { ctx.beginPath(); ctx.arc(a, b, 3.5, 0, 7); ctx.fill(); } }
+const TTT_SEQ = [40, 36, 4, 44, 76, 72, 0, 8, 80, 30, 10, 14, 50, 22, 20, 58, 60, 24, 64, 48, 32, 52, 16, 68, 28, 42, 56];
+function drawTTT(p, t, neon) {
+  const { g: c, w, h } = p; c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h);
+  const S = Math.min(w, h) * 0.82, ox = (w - S) / 2, oy = (h - S) / 2, B = S / 3, s = B / 3.4;
+  const cycle = TTT_SEQ.length * 380 + 1800, k = (t % cycle) / 380, shown = Math.min(TTT_SEQ.length, Math.floor(k));
+  if (!neon) ropes(c, ox, oy, S, S);
+  const cells = Array(81).fill(0); for (let i = 0; i < shown; i++) cells[TTT_SEQ[i]] = i % 2 ? 2 : 1;
+  const won = []; for (let b = 0; b < 9; b++) { const o = b * 9, L = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]; for (const [a, bb, cc] of L) { const v = cells[o + a]; if (v && v === cells[o + bb] && v === cells[o + cc]) { won[b] = v; break; } } }
+  const next = shown < TTT_SEQ.length ? TTT_SEQ[shown - 1] % 9 : -1;
+  for (let b = 0; b < 9; b++) {
+    const bx = ox + (b % 3) * B, by = oy + ((b / 3) | 0) * B;
+    if (b === next && shown) { c.fillStyle = (shown % 2 ? 'rgba(46,242,255,' : 'rgba(255,46,136,') + (0.12 + 0.08 * Math.sin(t / 200)) + ')'; c.fillRect(bx + 4, by + 4, B - 8, B - 8); }
+    c.strokeStyle = 'rgba(190,170,240,.35)'; c.lineWidth = 1;
+    for (let q = 1; q < 3; q++) { c.beginPath(); c.moveTo(bx + 6 + q * (B - 12) / 3, by + 6); c.lineTo(bx + 6 + q * (B - 12) / 3, by + B - 6); c.moveTo(bx + 6, by + 6 + q * (B - 12) / 3); c.lineTo(bx + B - 6, by + 6 + q * (B - 12) / 3); c.stroke(); }
+    for (let i = 0; i < 9; i++) {
+      const v = cells[b * 9 + i]; if (!v) continue; const cx = bx + 6 + (i % 3 + 0.5) * (B - 12) / 3, cy = by + 6 + ((i / 3 | 0) + 0.5) * (B - 12) / 3;
+      const prog = TTT_SEQ.indexOf(b * 9 + i) === shown - 1 ? Math.min(1, (k - (shown - 1)) * 2) : 1;
+      c.globalAlpha = won[b] ? 0.25 : 1; (v === 1 ? X : O)(c, cx, cy, s * 0.28, v === 1 ? PINK : CYAN, prog); c.globalAlpha = 1;
+    }
+    if (won[b]) (won[b] === 1 ? X : O)(c, bx + B / 2, by + B / 2, B * 0.3, won[b] === 1 ? PINK : CYAN);
+  }
+  glowStroke(c, neon ? '#b46bff' : 'rgba(255,210,63,.7)', 12, () => { c.lineWidth = 2.5; for (let q = 1; q < 3; q++) { c.beginPath(); c.moveTo(ox + q * B, oy); c.lineTo(ox + q * B, oy + S); c.moveTo(ox, oy + q * B); c.lineTo(ox + S, oy + q * B); c.stroke(); } });
+  if (neon && Math.floor(t / 2600) % 3 === 1) { const f = (t % 2600) / 2600; c.save(); c.globalAlpha = 1 - f; c.font = `${S * 0.3 * (0.6 + f)}px serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('💣', w / 2, h / 2); c.restore(); }
+}
+// Top Rope Four preview: pieces drop, a row of four flashes and vanishes, everything falls
+const C4_SCRIPT = [[3, 1], [3, 2], [2, 1], [4, 2], [1, 1], [2, 2], [0, 1], [5, 2], [4, 1], [6, 2]];
+function drawC4(p, t) {
+  const { g: c, w, h } = p; c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h);
+  const Wc = 7, Hc = 6, Q = Math.min(w / (Wc + 1), h / (Hc + 1.4)), ox = (w - Wc * Q) / 2, oy = (h - Hc * Q) / 2 + Q * 0.25;
+  ropes(c, ox, oy, Wc * Q, Hc * Q); c.fillStyle = '#1a0a38'; c.fillRect(ox, oy, Wc * Q, Hc * Q);
+  for (let r = 0; r < Hc; r++) for (let k = 0; k < Wc; k++) { c.fillStyle = 'rgba(0,0,0,.55)'; c.beginPath(); c.arc(ox + (k + 0.5) * Q, oy + (r + 0.5) * Q, Q * 0.4, 0, 7); c.fill(); }
+  const step = 520, cycle = C4_SCRIPT.length * step + 3200, tt = t % cycle, n = Math.min(C4_SCRIPT.length, Math.floor(tt / step) + 1);
+  const heights = Array(Wc).fill(0), pieces = [];
+  for (let i = 0; i < n; i++) { const [col, pl] = C4_SCRIPT[i]; pieces.push({ col, row: Hc - 1 - heights[col], pl, i }); heights[col]++; }
+  // after the 7th drop pink has 0-1-2-3 on the bottom row: flash, vanish, collapse
+  const clearAt = 7 * step, phase = tt - clearAt;
+  for (const pc of pieces) {
+    let y = oy + (pc.row + 0.5) * Q; const x = ox + (pc.col + 0.5) * Q;
+    const age = tt - pc.i * step; if (age < 300) { const f = age / 300; y = (oy - Q * 0.6) + (y - (oy - Q * 0.6)) * (f * f); }
+    const inRun = pc.row === Hc - 1 && pc.pl === 1 && pc.col <= 3;
+    if (phase > 0 && inRun) { if (phase > 600) continue; c.save(); c.shadowColor = '#fff'; c.shadowBlur = 25; disc(c, x, y, Q * 0.42 * (1 + 0.15 * Math.sin(phase / 40)), '#fff'); c.restore(); continue; }
+    if (phase > 600 && pc.row < Hc - 1 && pc.col <= 3) { const f = Math.min(1, (phase - 600) / 280); y += Q * f * f; }
+    disc(c, x, y, Q * 0.38, pc.pl === 1 ? PINK : CYAN);
+  }
+  if (phase > 0 && phase < 1500) { c.save(); c.globalAlpha = Math.min(1, (1500 - phase) / 400); c.font = `italic 900 ${Q * 0.9}px ui-monospace, Menlo, monospace`; c.textAlign = 'center'; c.fillStyle = '#fff'; c.shadowColor = PINK; c.shadowBlur = 20; c.fillText('PINFALL!', w / 2, oy + Hc * Q * 0.45); c.restore(); }
+}
+// King of the Ring preview: a pink piece double-jumps, gets crowned, cyan reinforcement runs in
+function drawChk(p, t) {
+  const { g: c, w, h } = p; c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h);
+  const N = 8, Q = Math.min(w, h) * 0.9 / N, ox = (w - N * Q) / 2, oy = (h - N * Q) / 2;
+  ropes(c, ox, oy, N * Q, N * Q);
+  for (let r = 0; r < N; r++) for (let k = 0; k < N; k++) { c.fillStyle = (r + k) % 2 ? '#2a1352' : '#140828'; c.fillRect(ox + k * Q, oy + r * Q, Q, Q); }
+  const at = (r, k) => [ox + (k + 0.5) * Q, oy + (r + 0.5) * Q];
+  const cycle = 6000, tt = t % cycle;
+  const statics = [[0, 1, 2], [0, 5, 2], [1, 6, 2], [2, 7, 2], [6, 1, 1], [7, 2, 1], [6, 5, 1], [7, 6, 1]];
+  for (const [r, k, pl] of statics) disc(c, ...at(r, k), Q * 0.38, pl === 1 ? PINK : CYAN);
+  // victims
+  if (tt < 1500) disc(c, ...at(4, 3), Q * 0.38, CYAN);
+  if (tt < 2300) disc(c, ...at(2, 3), Q * 0.38, CYAN);
+  // jumper path (5,2) -> (3,4) -> (1,2) -> crown at row 0? path ends (1,2); then steps to (0,3)
+  const path = [[5, 2], [3, 4], [1, 2], [0, 3]], times = [700, 1500, 2300, 3000];
+  let pos = at(5, 2), lift = 0, king = tt > 3000;
+  for (let i = 0; i < 3; i++) {
+    const s0 = times[i] - 700, s1 = times[i];
+    if (tt >= s0 && tt < s1) { const f = (tt - s0) / 700, a = at(...path[i]), b = at(...path[i + 1]); pos = [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f]; lift = Math.sin(Math.PI * f) * (i < 2 ? Q * 0.7 : Q * 0.15); }
+    else if (tt >= s1) pos = at(...path[i + 1]);
+  }
+  if (tt < 0) pos = at(5, 2);
+  disc(c, pos[0], pos[1] - lift, Q * 0.38 * (1 + lift / Q * 0.3), PINK, king);
+  for (const [ts, sq] of [[1500, [4, 3]], [2300, [2, 3]]]) if (tt > ts && tt < ts + 500) { const f = (tt - ts) / 500, [x, y] = at(...sq); c.save(); c.globalAlpha = 1 - f; c.strokeStyle = GOLD; c.lineWidth = 3; c.beginPath(); c.arc(x, y, Q * (0.3 + f), 0, 7); c.stroke(); c.restore(); }
+  if (tt > 3800) { const f = Math.min(1, (tt - 3800) / 400), [x, y] = at(0, 3); c.save(); c.globalAlpha = Math.min(1, (6000 - tt) / 500); disc(c, ...at(1, 4), Q * 0.38 * (0.3 + 0.7 * f), CYAN); c.font = `italic 900 ${Q * 0.55}px ui-monospace, Menlo, monospace`; c.textAlign = 'center'; c.fillStyle = '#fff'; c.shadowColor = CYAN; c.shadowBlur = 16; c.fillText('NEW ENTRANT!', w / 2, h / 2 + Q * 0.2); c.restore(); }
+  if (tt > 3000 && tt < 3800) { c.save(); c.font = `italic 900 ${Q * 0.6}px ui-monospace, Menlo, monospace`; c.textAlign = 'center'; c.fillStyle = '#fff'; c.shadowColor = GOLD; c.shadowBlur = 16; c.fillText('👑 CROWNED!', w / 2, h / 2 + Q * 0.2); c.restore(); }
+}
+function drawPreviews(now) {
+  for (const p of previews) {
+    if (!p.w) continue;
+    const speed = p.card.matches(':hover') || p.card.classList.contains('focus') ? 1.8 : 1, t = (now - p.t0) * speed;
+    if (p.kind === 'ttt') drawTTT(p, t, false); else if (p.kind === 'neon') drawTTT(p, t, true); else if (p.kind === 'c4') drawC4(p, t); else drawChk(p, t);
+  }
+}
+
+// ---------- interaction ----------
+const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+cards.forEach(card => {
+  card.addEventListener('mouseenter', () => { targetColor = hex(getComputedStyle(card).getPropertyValue('--c').trim()); excite = Math.min(1.1, excite + 0.35); cheer(0.5); tone(660, 0.08, 'square', 0.06, 990); });
+  card.addEventListener('click', e => { e.preventDefault(); enter(card); });
+});
+let leaving = false;
+function enter(card) {
+  if (leaving) return; leaving = true;
+  const wipe = document.getElementById('wipe');
+  wipe.style.setProperty('--c', getComputedStyle(card).getPropertyValue('--c'));
+  wipe.querySelector('.t').textContent = card.querySelector('.name').textContent;
+  wipe.classList.add('on'); excite = 1.2; bell(); cheer(1.5);
+  setTimeout(() => { location.href = card.href; }, soundOn ? 1100 : 800);
+}
+addEventListener('pageshow', () => { leaving = false; document.getElementById('wipe').classList.remove('on'); });
+addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const i = +e.key - 1;
+  if (i >= 0 && i < cards.length) { cards.forEach(c => c.classList.remove('focus')); cards[i].classList.add('focus'); enter(cards[i]); }
+});
+
+function frame(now) { drawArena(now); drawPreviews(now); requestAnimationFrame(frame); }
+setTimeout(sizePreviews, 50); setTimeout(sizePreviews, 1400);
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
